@@ -1,0 +1,21 @@
+name:                day01
+version:             0.1.0.0
+synopsis:            Day 01.
+homepage:            https://github.com/phaazon/advent-of-code-2k18
+license:             BSD3
+license-file:        LICENSE
+author:              Dimitri Sabadie
+maintainer:          dimitri.sabadie@gmail.com
+
+build-type:          Simple
+extra-source-files:  CHANGELOG.md
+cabal-version:       >=1.10
+
+executable day01
+  main-is:             Main.hs
+  -- other-extensions:
+  build-depends:       base >=4.12 && <4.13,
+                       containers >=0.6 && <0.7
+  hs-source-dirs:      src
+  default-language:    Haskell2010
+

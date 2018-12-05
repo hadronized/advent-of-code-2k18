@@ -2,17 +2,18 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE StrictData #-}
+{-# LANGUAGE TupleSections #-}
 
 module Main where
 
 import Control.Monad.State (MonadState, gets, modify)
 import Data.Foldable (traverse_)
-import Data.Function (on)
 import Data.List (maximumBy, sortBy)
-import Data.Map (Map)
-import qualified Data.Map as M
+import Data.Map.Strict (Map)
+import Data.Ord (comparing)
+import qualified Data.Map.Strict as M
 import Data.Maybe (fromJust)
-import Data.Time (UTCTime, defaultTimeLocale, parseTimeOrError)
+import Data.Time (LocalTime(..), TimeOfDay(..), defaultTimeLocale, parseTimeOrError)
 import Data.Text as T (Text, drop, lines, split, unpack, words)
 import Data.Text.IO as T (getContents)
 import Data.Vector (Vector)
@@ -23,22 +24,21 @@ readT :: (Read a) => Text -> a
 readT = read . unpack
 
 data Entry = Entry {
-    timestamp :: UTCTime,
+    timestamp :: LocalTime,
     action :: Text
   } deriving (Show)
 
 type GuardianId = Natural
 
 data Action
-  = BeginShift UTCTime
-  | WakeUp UTCTime
-  | FallAsleep UTCTime
+  = BeginShift GuardianId
+  | WakeUp
+  | FallAsleep
     deriving (Eq, Ord, Show)
 
 data St = St {
     stLastGuardianId :: GuardianId,
-    stLastAction :: Action,
-    stGuardianMinutes :: M.Map GuardianId (Vector Minute)
+    stLastAction :: Action
   }
 
 entryFromString :: Text -> Maybe Entry
@@ -51,46 +51,60 @@ entryFromString s = case split (== ']') s of
 readGuardianId :: Text -> Natural
 readGuardianId = readT . T.drop 1
 
--- read an entry and accumulate state
-accumEntry :: MonadState St m => Entry -> m ()
-accumEntry entry = do
-  case T.words (action entry) of
-    ["Guard", ident, "begins", "shift"] -> do
-      -- if the previous one wasn’t sleeping
-      gets stLastAction >>= \case
-        BeginShift start -> do
-          -- 
+treatEntries :: [Entry] -> [(LocalTime, Action)]
+treatEntries = map $ \entry ->
+  let time = timestamp entry
+  in case T.words (action entry) of
+    ["Guard", ident, "begins", "shift"] -> (time, BeginShift $ readGuardianId ident)
+    ("falls":_) -> (time, FallAsleep)
+    ("wakes":_) -> (time, WakeUp)
+    _ -> error "lol"
 
-      modify $ \st -> do
-        st { stLastGuardianId = readGuardianId ident,
-             stLastAction = BeginShift time
-           }
+type Minute = Natural
+type Minutes = [Minute]
 
-    ("falls":_) -> modify $ \st -> st { stLastAction = FallAsleep time }
-
-    ("wakes":_) -> do
-      modify $ \st -> st { stLastAction = FallAsleep time }
-
-    _ -> pure ()
+sleepers :: [(LocalTime, Action)] -> [(GuardianId, Minutes)]
+sleepers entries = go Nothing entries
   where
-    time = timestamp entry
+    go _ [] = []
 
-type Minute = Int
+    go (Just (Just lastT, lastGID)) ((t, BeginShift gid):xs) =
+      (lastGID, toMinutes lastT t) : go (Just (Nothing, gid)) xs
 
-accumMinutes :: GuardianId -> Minute -> Minute -> M.Map GuardianId (Vector Minute) -> M.Map GuardianId (Vector Minute)
-accumMinutes gid start end guardians =
-    case M.lookup gid guardians of
-      Nothing -> M.insert gid (accumMinutes zeroMinutes) guardians
-      Just minutes -> M.insert gid (accumMinutes minutes) guardians
+    go _ ((t, BeginShift gid):xs) = go (Just (Nothing, gid)) xs
+
+    go (Just (_, lastGID)) ((t, FallAsleep):xs) = go (Just (Just t, lastGID)) xs
+
+    go (Just (Just lastT, lastGID)) ((t, WakeUp):xs) =
+      (lastGID, toMinutes lastT t) : go (Just (Nothing, lastGID)) xs
+
+    go a b = error $ "sleepers error: " <> show a <> ": " <> show b
+
+    toMinutes a b = map fromIntegral [todMin (localTimeOfDay a) .. todMin (localTimeOfDay b) - 1]
+
+type Count = Natural
+
+freqTable :: (Ord a) => [a] -> Map a Count
+freqTable = M.fromListWith (+) . map (,1)
+
+findMostOccurring :: Map a Count -> (a, Count)
+findMostOccurring = maximumBy (comparing snd) . M.toList
+
+findSleepiest :: [(GuardianId, Minutes)] -> (GuardianId, (Minute, Count))
+findSleepiest guardians = maximumBy (comparing $ snd . snd) $ M.toList sleepyGuardians
   where
-    accumMinutes minutes = V.accum (+) minutes [(m, 1) | m <- [start..end]]
-    zeroMinutes = V.fromList [0..59]
-
-findMostAsleep :: M.Map GuardianId (Vector Minute) -> (GuardianId, Minute)
-findMostAsleep = maximumBy (compare `on` snd) . M.toList . fmap V.maximum
+    guardiansMap = M.fromListWith (++) guardians
+    sleepyGuardians = fmap (findMostOccurring . freqTable) guardiansMap
 
 main :: IO ()
 main = do
   entries <- fmap (fromJust . traverse entryFromString . T.lines) T.getContents
-  let byTimeSorted = sortBy (compare `on` timestamp) entries
-  traverse_ print byTimeSorted
+  let byTimeSorted = sortBy (comparing timestamp) entries
+      actions = treatEntries byTimeSorted
+      sleepies = sleepers actions
+      sleepiest = findSleepiest sleepies
+      gid = fst sleepiest
+      mins = fst (snd sleepiest)
+      result = gid * mins
+
+  print $ "Sleepiest: " <> show sleepiest <> "(" <> show result <> ")"

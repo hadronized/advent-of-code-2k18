@@ -20,6 +20,24 @@ import Data.Vector (Vector)
 import qualified Data.Vector as V
 import Numeric.Natural (Natural)
 
+main :: IO ()
+main = do
+  putStrLn ""
+  entries <- fmap (fromJust . traverse entryFromString . T.lines) T.getContents
+  let byTimeSorted = sortBy (comparing timestamp) entries
+      dispatched = dispatchActions (treatEntries byTimeSorted)
+      sleepiest = findSleepiest dispatched
+      (gid, mins) = findMostFrequentlySleepy dispatched
+      computeResult s =
+        let gid = fst s
+            mins = fst (snd s)
+        in gid * mins
+
+  print $ "Sleepiest: " <> show (computeResult sleepiest)
+  print $ "Frequently sleepy: " <> show (gid * mins)
+
+-- part 1
+
 readT :: (Read a) => Text -> a
 readT = read . unpack
 
@@ -122,15 +140,9 @@ findSleepiest =
   where
     spanIndex = concatMap (\(i, x) -> replicate (fromIntegral x) i) . zip [0..]
 
-main :: IO ()
-main = do
-  putStrLn ""
-  entries <- fmap (fromJust . traverse entryFromString . T.lines) T.getContents
-  let byTimeSorted = sortBy (comparing timestamp) entries
-      dispatched = dispatchActions (treatEntries byTimeSorted)
-      sleepiest = findSleepiest dispatched
-      gid = fst sleepiest
-      mins = fst (snd sleepiest)
-      result = gid * mins
-
-  print $ "Sleepiest: " <> show sleepiest <> "(" <> show result <> ")"
+-- part 2
+findMostFrequentlySleepy :: Map GuardianId [(LocalTime, Action)] -> (GuardianId, Minute)
+findMostFrequentlySleepy =
+    fmap findMin . maximumBy (comparing $ maximum . snd) . M.toList . fmap minutesCounts
+  where
+    findMin = fst . maximumBy (comparing snd) . zip [0..]

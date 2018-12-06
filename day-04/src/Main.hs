@@ -85,12 +85,13 @@ minutesCounts :: [(LocalTime, Action)] -> Minutes
 minutesCounts = go zeroMinutes Nothing
   where
     zeroMinutes = replicate 60 0
+    asMinutes = todMin . localTimeOfDay
 
     go minutes (Just sleepTime) ((t, action):xs) =
       case action of
-        BeginShift _ -> go (addSleepCount minutes sleepTime t) Nothing xs
+        BeginShift _ -> go minutes Nothing xs --go (addSleepCount minutes (asMinutes sleepTime) 60) Nothing xs
         FallAsleep -> go minutes (Just t) xs
-        WakeUp -> go (addSleepCount minutes sleepTime t) Nothing xs
+        WakeUp -> go (addSleepCount minutes (asMinutes sleepTime) (asMinutes t)) Nothing xs
 
     go minutes Nothing ((t, action):xs) =
       case action of
@@ -102,9 +103,7 @@ minutesCounts = go zeroMinutes Nothing
     addSleepCount minutes sleepTime t = zipWith (+) minutes range
       where
         range :: Minutes
-        range = replicate sleepTime' 0 <> replicate (fromIntegral t' - sleepTime') 1 <> replicate (60 - t') 0
-        sleepTime' = todMin (localTimeOfDay sleepTime)
-        t' = todMin (localTimeOfDay t)
+        range = replicate sleepTime 0 <> replicate (fromIntegral t - sleepTime) 1 <> replicate (60 - t) 0
 
 type Minute = Natural
 type Minutes = [Minute]
@@ -118,14 +117,18 @@ findMostOccurring :: Map a Count -> (a, Count)
 findMostOccurring = maximumBy (comparing snd) . M.toList
 
 findSleepiest :: Map GuardianId [(LocalTime, Action)] -> (GuardianId, (Minute, Count))
-findSleepiest = fmap (findMostOccurring . freqTable) . maximumBy (comparing $ sum . snd) . M.toList . fmap minutesCounts
+findSleepiest =
+    fmap (findMostOccurring . freqTable . spanIndex) . maximumBy (comparing $ sum . snd) . M.toList . fmap minutesCounts
+  where
+    spanIndex = concatMap (\(i, x) -> replicate (fromIntegral x) i) . zip [0..]
 
 main :: IO ()
 main = do
   putStrLn ""
   entries <- fmap (fromJust . traverse entryFromString . T.lines) T.getContents
   let byTimeSorted = sortBy (comparing timestamp) entries
-      sleepiest = findSleepiest . dispatchActions $ treatEntries byTimeSorted
+      dispatched = dispatchActions (treatEntries byTimeSorted)
+      sleepiest = findSleepiest dispatched
       gid = fst sleepiest
       mins = fst (snd sleepiest)
       result = gid * mins

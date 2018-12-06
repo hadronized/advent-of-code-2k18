@@ -51,6 +51,7 @@ entryFromString s = case split (== ']') s of
 readGuardianId :: Text -> Natural
 readGuardianId = readT . T.drop 1
 
+-- Interpret the entries into a stream of timed action.
 treatEntries :: [Entry] -> [(LocalTime, Action)]
 treatEntries = map $ \entry ->
   let time = timestamp entry
@@ -60,27 +61,53 @@ treatEntries = map $ \entry ->
     ("wakes":_) -> (time, WakeUp)
     _ -> error "lol"
 
+-- Dispatch actions to their respective guardian.
+dispatchActions :: [(LocalTime, Action)] -> Map GuardianId [(LocalTime, Action)]
+dispatchActions = go mempty Nothing
+  where
+    go guardians _ ((t, action@(BeginShift gid)):xs) =
+      go (insertAction gid t action guardians) (Just gid) xs
+
+    go guardians jgid@(Just gid) ((t, action):xs) = go (insertAction gid t action guardians) jgid xs
+
+    go guardians _ [] = fmap V.toList guardians
+
+    go _ _ _ = error "dispatchActions: the impossible fucking occurred!"
+
+    insertAction gid t action guardians =
+      M.insertWith (flip (<>)) gid (V.singleton (t, action)) guardians
+
+-- Compute sleep times for a single guardian.
+--
+-- It returns a list of 60 elements giving the number of times a guardian was asleep at a given
+-- minute.
+minutesCounts :: [(LocalTime, Action)] -> Minutes
+minutesCounts = go zeroMinutes Nothing
+  where
+    zeroMinutes = replicate 60 0
+
+    go minutes (Just sleepTime) ((t, action):xs) =
+      case action of
+        BeginShift _ -> go (addSleepCount minutes sleepTime t) Nothing xs
+        FallAsleep -> go minutes (Just t) xs
+        WakeUp -> go (addSleepCount minutes sleepTime t) Nothing xs
+
+    go minutes Nothing ((t, action):xs) =
+      case action of
+        FallAsleep -> go minutes (Just t) xs
+        _ -> go minutes Nothing xs
+
+    go minutes _ [] = minutes
+    
+    addSleepCount minutes sleepTime t = zipWith (+) minutes range
+      where
+        range :: Minutes
+        range = replicate sleepTime' 0 <> replicate (fromIntegral t' - 1 - sleepTime') 1 <> replicate (59 - t') 0
+        sleepTime' = todMin (localTimeOfDay sleepTime)
+        t' = todMin (localTimeOfDay t)
+
 type Minute = Natural
 type Minutes = [Minute]
-
-sleepers :: [(LocalTime, Action)] -> [(GuardianId, Minutes)]
-sleepers entries = go Nothing entries
-  where
-    go _ [] = []
-
-    go (Just (Just lastT, lastGID)) ((t, BeginShift gid):xs) =
-      (lastGID, toMinutes lastT t) : go (Just (Nothing, gid)) xs
-
-    go _ ((t, BeginShift gid):xs) = go (Just (Nothing, gid)) xs
-
-    go (Just (_, lastGID)) ((t, FallAsleep):xs) = go (Just (Just t, lastGID)) xs
-
-    go (Just (Just lastT, lastGID)) ((t, WakeUp):xs) =
-      (lastGID, toMinutes lastT t) : go (Just (Nothing, lastGID)) xs
-
-    go a b = error $ "sleepers error: " <> show a <> ": " <> show b
-
-    toMinutes a b = map fromIntegral [todMin (localTimeOfDay a) .. todMin (localTimeOfDay b) - 1]
 
 type Count = Natural
 
@@ -90,19 +117,15 @@ freqTable = M.fromListWith (+) . map (,1)
 findMostOccurring :: Map a Count -> (a, Count)
 findMostOccurring = maximumBy (comparing snd) . M.toList
 
-findSleepiest :: [(GuardianId, Minutes)] -> (GuardianId, (Minute, Count))
-findSleepiest guardians = maximumBy (comparing $ snd . snd) $ M.toList sleepyGuardians
-  where
-    guardiansMap = M.fromListWith (++) guardians
-    sleepyGuardians = fmap (findMostOccurring . freqTable) guardiansMap
+findSleepiest :: Map GuardianId [(LocalTime, Action)] -> (GuardianId, (Minute, Count))
+findSleepiest = fmap (findMostOccurring . freqTable) . maximumBy (comparing $ sum . snd) . M.toList . fmap minutesCounts
 
 main :: IO ()
 main = do
+  putStrLn ""
   entries <- fmap (fromJust . traverse entryFromString . T.lines) T.getContents
   let byTimeSorted = sortBy (comparing timestamp) entries
-      actions = treatEntries byTimeSorted
-      sleepies = sleepers actions
-      sleepiest = findSleepiest sleepies
+      sleepiest = findSleepiest . dispatchActions $ treatEntries byTimeSorted
       gid = fst sleepiest
       mins = fst (snd sleepiest)
       result = gid * mins

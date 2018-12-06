@@ -102,7 +102,7 @@ minutesCounts = go zeroMinutes Nothing
     addSleepCount minutes sleepTime t = zipWith (+) minutes range
       where
         range :: Minutes
-        range = replicate sleepTime' 0 <> replicate (fromIntegral t' - 1 - sleepTime') 1 <> replicate (59 - t') 0
+        range = replicate sleepTime' 0 <> replicate (fromIntegral t' - sleepTime') 1 <> replicate (60 - t') 0
         sleepTime' = todMin (localTimeOfDay sleepTime)
         t' = todMin (localTimeOfDay t)
 

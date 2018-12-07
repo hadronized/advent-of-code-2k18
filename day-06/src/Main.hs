@@ -24,6 +24,21 @@ parse t = case split (== ',') t of
 
 type Point = (Int, Int)
 
+main :: IO ()
+main = do
+  coords <- fmap (map parse . T.lines) T.getContents
+  let aabb = findAABB coords
+      points = aabbToStream aabb
+      indexed = zip [0..] coords
+      nearests = map (\p -> (p, nearest p indexed)) points
+      blacklist = blackListPoints nearests aabb
+      filteredNearests = filterByBlacklist blacklist nearests
+      area = biggestArea (map snd filteredNearests)
+      safeArea = filter (\p -> sum (map (manhDist p) coords) <= 10000) points
+
+  print area
+  print (length safeArea)
+
 -- part 1
 
 -- Axis Aligned Bounding Box
@@ -76,16 +91,3 @@ filterByBlacklist blacklist = filter lookupBlacklist
   where
     lookupBlacklist (_, Just i) = i `S.notMember` blacklist
     lookupBlacklist _ = False
-
-main :: IO ()
-main = do
-  coords <- fmap (map parse . T.lines) T.getContents
-  let aabb = findAABB coords
-      points = aabbToStream aabb
-      indexed = zip [0..] coords
-      nearests = map (\p -> (p, nearest p indexed)) points
-      blacklist = blackListPoints nearests aabb
-      filteredNearests = filterByBlacklist blacklist nearests
-      area = biggestArea (map snd filteredNearests)
-
-  print area

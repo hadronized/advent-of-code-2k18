@@ -83,7 +83,7 @@ stepAvailablePar currentTime work gr =
   where
     (done, running) = M.partition (== 0) work
     gr' = foldl (flip removeStep) gr (map fst $ M.toList done)
-    backlog = running <> (M.take availableWorkers . M.fromList . map timeStep $ getAvailable gr')
+    backlog = running <> (M.take availableWorkers . flip M.difference running . M.fromList . map timeStep $ getAvailable gr')
     timeStep s = (s, fromIntegral $ 61 + ord s - ord 'A')
     availableWorkers = maxWorkerNb - length running
     decrWork = flip (-)

@@ -4,6 +4,8 @@
 
 module Main where
 
+import Debug.Trace (trace)
+
 import Control.Monad (replicateM)
 import Control.Monad.State (State, gets, evalState, modify)
 import Data.List.NonEmpty as NE (NonEmpty, fromList, toList)
@@ -45,10 +47,23 @@ parseNode = do
 
 -- part 1
 checksum :: Node -> Natural
-checksum node = sum (NE.toList $ nodeMetadata node) + sum (map checksum $ nodeChildren node)
+checksum node = metadataChecksum (nodeMetadata node) + sum (map checksum $ nodeChildren node)
+
+metadataChecksum :: NonEmpty Natural -> Natural
+metadataChecksum = sum . NE.toList
+
+-- part 2
+nodeValue :: Node -> Natural
+nodeValue (Node _ [] metadata) = metadataChecksum metadata
+nodeValue (Node _ children metadata) = sum [nodeValue n | Just n <- map index (NE.toList metadata)]
+  where
+    index i =
+      let i' = fromIntegral i - 1
+      in if i' < 0 || i' >= length children then Nothing else Just (children !! i')
 
 main :: IO ()
 main = do
   root <- fmap parse getContents
 
   putStrLn $ "Checksum: " <> show (checksum root)
+  putStrLn $ "Root value: " <> show (nodeValue root)

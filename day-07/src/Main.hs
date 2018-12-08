@@ -1,8 +1,10 @@
 module Main where
 
+import Debug.Trace (trace)
+
 import Data.Char (ord)
 import Data.Foldable (foldr')
-import Data.List (sort, sortBy)
+import Data.List (minimumBy, sort, sortBy)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as M
 import Data.Ord (comparing)
@@ -73,15 +75,18 @@ maxWorkerNb = 5
 
 stepAvailablePar :: Time -> Work -> Graph -> Time
 stepAvailablePar currentTime work gr =
-    case M.lookupMin nextWork of
-      Just (_, timeIncrement) ->
-        stepAvailablePar (currentTime + timeIncrement) (fmap (decrWork timeIncrement) nextWork) gr'
+    case timeIncrement of
+      Just (_, timeIncrement') ->
+        stepAvailablePar (currentTime + timeIncrement') (fmap (decrWork timeIncrement') backlog) gr'
 
-      Nothing -> currentTime
+      Nothing -> trace (show work) currentTime
   where
     (done, running) = M.partition (== 0) work
     gr' = foldl (flip removeStep) gr (map fst $ M.toList done)
-    backlog = running <> (M.fromList . map timeStep $ getAvailable gr')
+    backlog = running <> (M.take availableWorkers . M.fromList . map timeStep $ getAvailable gr')
     timeStep s = (s, fromIntegral $ 61 + ord s - ord 'A')
-    nextWork = M.take maxWorkerNb backlog
+    availableWorkers = maxWorkerNb - length running
     decrWork = flip (-)
+    timeIncrement = case M.toList backlog of
+      [] -> Nothing
+      bl -> Just (minimumBy (comparing snd) bl)

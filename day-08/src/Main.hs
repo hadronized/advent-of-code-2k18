@@ -11,6 +11,13 @@ import Control.Monad.State (State, gets, evalState, modify)
 import Data.List.NonEmpty as NE (NonEmpty, fromList, toList)
 import Numeric.Natural (Natural)
 
+main :: IO ()
+main = do
+  root <- fmap parse getContents
+
+  putStrLn $ "Checksum: " <> show (checksum root)
+  putStrLn $ "Root value: " <> show (nodeValue root)
+
 data Node = Node {
     nodeChildren :: [Node],
     nodeMetadata :: NonEmpty Natural
@@ -49,10 +56,3 @@ nodeValue (Node children metadata) = sum [nodeValue n | Just n <- map index (NE.
     index i =
       let i' = fromIntegral i - 1
       in if i' < 0 || i' >= length children then Nothing else Just (children !! i')
-
-main :: IO ()
-main = do
-  root <- fmap parse getContents
-
-  putStrLn $ "Checksum: " <> show (checksum root)
-  putStrLn $ "Root value: " <> show (nodeValue root)

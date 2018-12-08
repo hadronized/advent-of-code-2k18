@@ -12,20 +12,9 @@ import Data.List.NonEmpty as NE (NonEmpty, fromList, toList)
 import Numeric.Natural (Natural)
 
 data Node = Node {
-    nodeHeader :: NodeHeader,
     nodeChildren :: [Node],
     nodeMetadata :: NonEmpty Natural
   } deriving (Eq, Show)
-
-data NodeHeader = NodeHeader {
-    nodeHeaderNodeNb :: Natural,
-    nodeHeaderMetadataNb :: Natural
-  } deriving (Eq, Show)
-
-data ParseStackInfo
-  = ChildrenNb Natural
-  | MetadataNb Natural
-    deriving (Eq, Show)
 
 newtype Parser a = Parser { runParser :: State [Natural] a } deriving (Applicative, Functor, Monad)
 
@@ -43,7 +32,7 @@ parseNode = do
   children <- replicateM (fromIntegral childrenNb) parseNode
   metadata <- fmap NE.fromList (replicateM (fromIntegral metadataNb) readInput)
 
-  pure $ Node (NodeHeader childrenNb metadataNb) children metadata
+  pure $ Node children metadata
 
 -- part 1
 checksum :: Node -> Natural
@@ -54,8 +43,8 @@ metadataChecksum = sum . NE.toList
 
 -- part 2
 nodeValue :: Node -> Natural
-nodeValue (Node _ [] metadata) = metadataChecksum metadata
-nodeValue (Node _ children metadata) = sum [nodeValue n | Just n <- map index (NE.toList metadata)]
+nodeValue (Node [] metadata) = metadataChecksum metadata
+nodeValue (Node children metadata) = sum [nodeValue n | Just n <- map index (NE.toList metadata)]
   where
     index i =
       let i' = fromIntegral i - 1

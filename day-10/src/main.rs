@@ -45,42 +45,6 @@ fn fill_ascii(ascii: &mut Vec<char>, aabb: AABB, width: i32, height: i32, points
   }
 }
 
-// CETTE BLAGUE
-//named!(int32 <&str, i32>,
-//    map!(digit, |d| d.parse().unwrap())
-//);
-//
-//named!(point_pair<&str, (i32, i32)>,
-//  do_parse!(
-//    char!('<') >>
-//    x: int32 >>
-//    char!(',') >>
-//    many0!(space) >>
-//    y: int32 >>
-//    char!('>') >>
-//    (x, y)
-//  )
-//);
-//
-//named!(line<&str, Point>,
-//  do_parse!(
-//    tag!("position=") >>
-//    position: point_pair >>
-//    many0!(space) >>
-//    tag!("velocity=") >>
-//    velocity: point_pair >>
-//    (Point { position, velocity })
-//  )
-//);
-//
-//named!(parse_points<&str, Vec<Point>>,
-//  many1!(do_parse!(
-//    l: line >>
-//    opt!(eol) >>
-//    (l)
-//  ))
-//);
-
 fn main() {
   let mut input = String::new();
   std::io::stdin().read_to_string(&mut input);

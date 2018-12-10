@@ -1,0 +1,8 @@
+[package]
+name = "day-10"
+version = "0.1.0"
+authors = ["Dimitri Sabadie <dimitri.sabadie@gmail.com>"]
+edition = "2018"
+
+[dependencies]
+nom = "4"

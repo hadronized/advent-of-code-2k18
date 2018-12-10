@@ -1,25 +1,21 @@
-use std::collections::LinkedList;
+use std::collections::VecDeque;
 
 const PLAYERS_NB: usize = 426;
 const MAX_MARBLES: isize = 72058 * 100;
 
 struct Zipper {
-  left: LinkedList<isize>,
+  left: VecDeque<isize>,
   middle: isize,
-  right: LinkedList<isize>,
+  right: VecDeque<isize>,
 }
 
 impl Zipper {
   fn new() -> Self {
     Zipper {
-      left: LinkedList::new(),
+      left: VecDeque::new(),
       middle: 0,
-      right: LinkedList::new()
+      right: VecDeque::new()
     }
-  }
-
-  fn len(&self) -> usize {
-    self.left.len() + self.right.len() + 1
   }
 
   fn focus(&self) -> isize {
@@ -78,7 +74,6 @@ fn main() {
   let mut players = vec![0; PLAYERS_NB];
   let mut game = Zipper::new();
   let mut marble = 1;
-  let mut index = 1;
   let mut player = 0;
 
   loop {

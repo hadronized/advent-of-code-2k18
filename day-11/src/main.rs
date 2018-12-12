@@ -51,7 +51,7 @@ fn main() {
         let i = index(col, row);
 
         if (power == largest2.1 && i < largest2.0) || power > largest2.1 {
-          largest2 = (index(col, row), power, d);
+          largest2 = (index(col, row), power, d + 1);
         }
 
         nested_power = power;

@@ -4,6 +4,7 @@ fn main() {
   let grid: Vec<_> = (0 .. 300 * 300).map(|i| power_level(1 + i % 300, 1 + i / 300, GRID_SERIAL_NUMBER)).collect();
   let mut largest = (0, i8::min_value()); // (index, power)
 
+  // part 1
   for row in 0 .. 298 {
     for col in 0 .. 298 {
       let mut power = 0;
@@ -23,6 +24,42 @@ fn main() {
   }
 
   println!("Largest fuel cell: ({}, {})", 1 + largest.0 % 300, 1 + largest.0 / 300);
+
+  // part 2
+  let mut largest2 = (0, i64::min_value(), 0); // (index, power, dimension)
+
+  for row in 0 .. 300 {
+    let max_iter_row = 300 - row; // 300 -> 1
+
+    for col in 0 .. 300 {
+      let max_iter_col = 300 - col; // 300 -> 1
+      let max_dim_squared = max_iter_row.min(max_iter_col); // 300x300 -> 1x1
+
+      // power used for nested dimensions
+      let mut nested_power = grid[index(col, row)] as i64;
+
+      for d in 1 .. max_dim_squared {
+        let mut power = nested_power;
+
+        for k in 0 .. d {
+          power += grid[index(col + d, row + k)] as i64;
+          power += grid[index(col + k, row + d)] as i64;
+        }
+
+        power += grid[index(col + d, row + d)] as i64;
+
+        let i = index(col, row);
+
+        if (power == largest2.1 && i < largest2.0) || power > largest2.1 {
+          largest2 = (index(col, row), power, d);
+        }
+
+        nested_power = power;
+      }
+    }
+  }
+
+  println!("Largest fuel cell of all: ({}, {}, {}, of power {})", 1 + largest2.0 % 300, 1 + largest2.0 / 300, largest2.2, largest2.1);
 }
 
 fn index(x: usize, y: usize) -> usize {

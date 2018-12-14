@@ -14,12 +14,6 @@ fn main() {
   let rules = parsed.rules;
 
   for _ in 0 .. 20 {
-    for &pot in &pots2 {
-      print!("{}", if pot == Pot::Plant { '#' } else { '.' });
-    }
-
-    println!("");
-
     for i in 2 .. pots.len() - 2 {
       let l2 = pots[i-2];
       let l1 = pots[i-1];
@@ -27,12 +21,18 @@ fn main() {
       let r1 = pots[i+1];
       let r2 = pots[i+2];
 
+      let mut found = false;
+
       for rule in &rules {
-        let (applied, new_pot) = Pot::apply_rule(l2, l1, c, r1, r2, &rule.0, rule.1);
-        if applied {
+        if let Some(new_pot) = Pot::apply_rule(l2, l1, c, r1, r2, &rule.0, rule.1) {
           pots2[i] = new_pot;
+          found = true;
           break;
         }
+      }
+
+      if !found {
+        pots2[i] = Pot::Empty;
       }
     }
 
@@ -66,13 +66,13 @@ impl Pot {
     r1: Self, r2: Self,
     rule: &[Self; 5],
     mutation: Self
-  ) -> (bool, Self) {
+  ) -> Option<Self> {
     let x = [l2, l1, c, r1, r2];
 
     if x == *rule {
-      (true, mutation)
+      Some(mutation)
     } else {
-      (false, c)
+      None
     }
   }
 }

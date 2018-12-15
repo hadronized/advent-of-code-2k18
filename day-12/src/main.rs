@@ -1,8 +1,9 @@
-use std::collections::VecDeque;
+use std::collections::{BTreeMap, VecDeque};
 use std::io::{Read, stdin};
 use std::mem;
 
 const GENERATIONS: usize = 50000000000;
+const THREADS_NB: usize = 8;
 
 fn main() {
   let mut input = String::new();
@@ -13,14 +14,16 @@ fn main() {
   let mut pots2 = pots.clone();
   let rules = parsed.rules;
 
-  for _ in 0 .. GENERATIONS {
+  for gen in 0 .. GENERATIONS {
+    println!("generation {}", gen);
+
     // account for left and right paddings
 
-    for pot in &pots {
-      print!("{}", if pot.1 == Pot::Plant { '#' } else { '.' });
-    }
+    //for pot in &pots {
+    //  print!("{}", if pot.1 == Pot::Plant { '#' } else { '.' });
+    //}
 
-    println!("");
+    //println!("");
 
     for i in 0 .. 5 {
       if pots[i].1 == Pot::Plant {
@@ -51,17 +54,9 @@ fn main() {
       let r1 = pots[i+1];
       let r2 = pots[i+2];
 
-      let mut found = false;
-
-      for rule in &rules {
-        if let Some(new_pot) = Pot::apply_rule(l2.1, l1.1, c.1, r1.1, r2.1, &rule.0, rule.1) {
-          pots2[i].1 = new_pot;
-          found = true;
-          break;
-        }
-      }
-
-      if !found {
+      if let Some(new_pot) = rules.get(&[l2.1, l1.1, c.1, r1.1, r2.1]) {
+        pots2[i].1 = *new_pot;
+      } else {
         pots2[i].1 = Pot::Empty;
       }
     }
@@ -73,7 +68,7 @@ fn main() {
   println!("score: {}", score);
 }
 
-#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
+#[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 enum Pot {
   Empty,
   Plant
@@ -87,28 +82,13 @@ impl Pot {
       Pot::Empty
     }
   }
-
-  fn apply_rule(
-    l2: Self, l1: Self,
-    c: Self,
-    r1: Self, r2: Self,
-    rule: &[Self; 5],
-    mutation: Self
-  ) -> Option<Self> {
-    let x = [l2, l1, c, r1, r2];
-
-    if x == *rule {
-      Some(mutation)
-    } else {
-      None
-    }
-  }
 }
 
 #[derive(Debug)]
 struct Game {
   initial_state: VecDeque<(i64, Pot)>,
-  rules: VecDeque<([Pot; 5], Pot)>,
+  //rules: Vec<([Pot; 5], Pot)>,
+  rules: BTreeMap<[Pot; 5], Pot>
 }
 
 impl Game {

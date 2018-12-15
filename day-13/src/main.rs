@@ -6,25 +6,35 @@ fn main() {
   stdin().read_to_string(&mut input).unwrap();
   let (map, mut carts) = Map::parse(&input);
 
+  // part 1
   let collision = loop {
     // sort the cart by y component
     carts.sort_by(|a, b| a.pos.cmp(&b.pos));
 
-    for cart in &carts {
-      println!("{:?}", cart);
-    }
-    
-    println!("");
-
-    if let Some(collision) = move_carts(&map, &mut carts) {
-      break collision;
+    let collisions = move_carts(&map, &mut carts);
+    if !collisions.is_empty() {
+      break collisions[0];
     }
   };
 
-  println!("Collision at {:?}", collision);
-}
+  println!("First collision: {:?}", carts[collision.0].pos);
 
-// part 1
+  // part 2
+  loop {
+    // sort the cart by y component
+    carts.sort_by(|a, b| a.pos.cmp(&b.pos));
+
+    for (ci, ck) in move_carts(&map, &mut carts) {
+      carts = carts.into_iter().enumerate().filter(|&(i, _)| i != ci && i != ck).map(|(_, c)| c).collect();
+    }
+
+    if carts.len() == 1 {
+      break;
+    }
+  };
+
+  println!("Last standing cart: {:?} ", carts);
+}
 
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 enum Rail {
@@ -152,21 +162,32 @@ impl Map {
   }
 }
 
-/// Move all carts one by one and return any collision.
+/// Move all carts one by one and return all collisions (return the index pairs of the carts that
+/// have crashed into each other).
 fn move_carts(
   map: &Map,
   carts: &mut Vec<Cart>,
-) -> Option<(u32, u32)> {
-  for i in 0 .. carts.len() {
+) -> Vec<(usize, usize)> {
+  let mut collisions: Vec<(usize, usize)> = Vec::new();
+
+  'outer: for i in 0 .. carts.len() {
+    // check that this cart hasn’t been collided into yet
+    for &collision in &collisions {
+      if i == collision.0 || i == collision.1 {
+        // already collided, don’t move that
+        continue 'outer;
+      }
+    }
+
     move_cart(map, &mut carts[i]);
     let collision = find_collision(&carts, i);
 
-    if collision.is_some() {
-      return collision;
+    if let Some(collider) = collision {
+      collisions.push((collider, i));
     }
   }
 
-  None
+  collisions
 }
 
 /// Move a cart according to its current direction and position on a given map.
@@ -213,24 +234,22 @@ fn move_cart(map: &Map, cart: &mut Cart) {
           Direction::Down => Direction::Right
         }
       }
-
-      _ => ()
     }
   }
 }
 
-/// Detect a collision between two carts.
+/// Detect a collision between two carts, returning the position of the crash and the index of the
+/// other cart that has collided.
 fn find_collision(
   carts: &Vec<Cart>,
   current_index: usize
-) -> Option<(u32, u32)> {
+) -> Option<usize> {
   for i in 0 .. carts.len() {
     if i != current_index {
       let cart = &carts[i];
 
       if cart.pos == carts[current_index].pos {
-        println!("collision for i={} (current_pos={}) and pos={:?}", i, current_index, cart.pos);
-        return Some(cart.pos);
+        return Some(i);
       }
     }
   }

@@ -208,7 +208,6 @@ fn move_cart(map: &Map, cart: &mut Cart) {
   cart.pos = next_pos;
 
   // change the direction of the cart
-  // TODO: try remove the | and -: it should work and take less memory!
   if let Some(rail) = map.0.get(&next_pos) {
     match rail {
       Rail::Cross => {

@@ -2,7 +2,7 @@ use std::collections::VecDeque;
 use std::io::{Read, stdin};
 use std::mem;
 
-const GENERATIONS: usize = 20;
+const GENERATIONS: usize = 50000000000;
 
 fn main() {
   let mut input = String::new();

@@ -1,9 +1,8 @@
-use std::collections::{BTreeMap, VecDeque};
+use std::collections::VecDeque;
 use std::io::{Read, stdin};
 use std::mem;
 
-const GENERATIONS: usize = 50000000000;
-const THREADS_NB: usize = 8;
+const GENERATIONS: usize = 200;
 
 fn main() {
   let mut input = String::new();
@@ -13,18 +12,10 @@ fn main() {
   let mut pots = parsed.initial_state;
   let mut pots2 = pots.clone();
   let rules = parsed.rules;
+  let mut prev_score = 0;
 
   for gen in 0 .. GENERATIONS {
-    println!("generation {}", gen);
-
     // account for left and right paddings
-
-    //for pot in &pots {
-    //  print!("{}", if pot.1 == Pot::Plant { '#' } else { '.' });
-    //}
-
-    //println!("");
-
     for i in 0 .. 5 {
       if pots[i].1 == Pot::Plant {
         for _ in 0 .. 5 - i {
@@ -62,10 +53,15 @@ fn main() {
     }
 
     mem::swap(&mut pots, &mut pots2);
+
+    let score: i64 = pots.iter().map(|x| if x.1 == Pot::Plant { x.0 } else { 0 }).sum();
+    println!("generation {}, score: {} (Δ = {})", gen, score, score - prev_score);
+
+    prev_score = score;
   }
 
-  let score: i64 = pots.iter().map(|x| if x.1 == Pot::Plant { x.0 } else { 0 }).sum();
-  println!("score: {}", score);
+  let score_50b = score_at(50000000000);
+  println!("score at 50B: {}", score_50b);
 }
 
 #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
@@ -87,7 +83,6 @@ impl Pot {
 #[derive(Debug)]
 struct Game {
   initial_state: VecDeque<(i64, Pot)>,
-  //rules: Vec<([Pot; 5], Pot)>,
   rules: BTreeMap<[Pot; 5], Pot>
 }
 
@@ -113,4 +108,9 @@ impl Game {
 
     Self { initial_state, rules }
   }
+}
+
+// O(1) get the score at a given generation – works only for gen ≥ 100.
+fn score_at(gen: u64) -> u64 {
+  6346 + (gen - 101) * 51
 }

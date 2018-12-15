@@ -22,54 +22,26 @@ fn main() {
 
     println!("");
 
-    if pots[0].1 == Pot::Plant {
-      for _ in 0 .. 5 {
-        pots.push_front((pots[0].0 - 1, Pot::Empty));
-        pots2.push_front((pots2[0].0 - 1, Pot::Empty));
+    for i in 0 .. 5 {
+      if pots[i].1 == Pot::Plant {
+        for _ in 0 .. 5 - i {
+          pots.push_front((pots[0].0 - 1, Pot::Empty));
+          pots2.push_front((pots2[0].0 - 1, Pot::Empty));
+        }
+
+        break;
       }
-    } else if pots[1].1 == Pot::Plant {
-      for _ in 0 .. 4 {
-        pots.push_front((pots[0].0 - 1, Pot::Empty));
-        pots2.push_front((pots2[0].0 - 1, Pot::Empty));
-      }
-    } else if pots[2].1 == Pot::Plant {
-      for _ in 0 .. 3 {
-        pots.push_front((pots[0].0 - 1, Pot::Empty));
-        pots2.push_front((pots2[0].0 - 1, Pot::Empty));
-      }
-    } else if pots[3].1 == Pot::Plant {
-      for _ in 0 .. 2 {
-        pots.push_front((pots[0].0 - 1, Pot::Empty));
-        pots2.push_front((pots2[0].0 - 1, Pot::Empty));
-      }
-    } else if pots[4].1 == Pot::Plant {
-      pots.push_front((pots[0].0 - 1, Pot::Empty));
-      pots2.push_front((pots2[0].0 - 1, Pot::Empty));
     }
 
-    if pots[pots.len() - 1].1 == Pot::Plant {
-      for _ in 0 .. 5 {
-        pots.push_back((pots[pots.len() - 1].0 + 1, Pot::Empty));
-        pots2.push_back((pots2[pots2.len() - 1].0 + 1, Pot::Empty));
+    for i in 0 .. 5 {
+      if pots[pots.len() - 1 - i].1 == Pot::Plant {
+        for _ in 0 .. 5 - i {
+          pots.push_back((pots[pots.len() - 1].0 + 1, Pot::Empty));
+          pots2.push_back((pots2[pots2.len() - 1].0 + 1, Pot::Empty));
+        }
+
+        break;
       }
-    } else if pots[pots.len() - 2].1 == Pot::Plant {
-      for _ in 0 .. 4 {
-        pots.push_back((pots[pots.len() - 1].0 + 1, Pot::Empty));
-        pots2.push_back((pots2[pots2.len() - 1].0 + 1, Pot::Empty));
-      }
-    } else if pots[pots.len() - 3].1 == Pot::Plant {
-      for _ in 0 .. 3 {
-        pots.push_back((pots[pots.len() - 1].0 + 1, Pot::Empty));
-        pots2.push_back((pots2[pots2.len() - 1].0 + 1, Pot::Empty));
-      }
-    } else if pots[pots.len() - 4].1 == Pot::Plant {
-      for _ in 0 .. 2 {
-        pots.push_back((pots[pots.len() - 1].0 + 1, Pot::Empty));
-        pots2.push_back((pots2[pots2.len() - 1].0 + 1, Pot::Empty));
-      }
-    } else if pots[pots.len() - 5].1 == Pot::Plant {
-      pots.push_back((pots[pots.len() - 1].0 + 1, Pot::Empty));
-      pots2.push_back((pots2[pots2.len() - 1].0 + 1, Pot::Empty));
     }
 
     for i in 2 .. pots.len() - 2 {

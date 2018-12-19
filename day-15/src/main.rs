@@ -1,5 +1,36 @@
 const ATTACK_DMG: u8 = 3;
 
+/// A block of a map.
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
+enum Block {
+  Wall,
+  Free,
+  Elf(UnitId),
+  Goblin(UnitId)
+}
+
+#[derive(Debug)]
+struct Unit {
+  hp: u8,
+  species: Species
+}
+
+impl Unit {
+  fn is_elf(&self) -> bool {
+    self.species == Species::Elf
+  }
+}
+
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
+enum Species {
+  Elf,
+  Goblin
+}
+
+type UnitId = usize;
+
+type Pos = (usize, usize);
+
 /// The map, containing walls, open caverns, globins and elves.
 #[derive(Debug)]
 struct Map {
@@ -32,15 +63,52 @@ impl Map {
     }
   }
 
-  // /// Get all the possible positions a unit can move to.
-  // fn get_available_destinations(&self, unit_id: UnitId) -> [Option<Pos>; 4] {
-  //   assert!(unit_id < self.units.len());
+  /// Get the block at a given position.
+  fn block_at(&self, p: &Pos) -> Option<&Block> {
+    let i = p.0 + p.1 * self.width;
+    self.blocks.get(i)
+  }
 
-  //   let unit_pos = self.units[unit_id].1;
-  //   let mut destinations = [None; 4];
+  /// Get all the possible positions a unit can move to.
+  fn get_available_destinations(&self, unit_id: UnitId) -> [Option<Pos>; 4] {
+    assert!(unit_id < self.units.len());
 
-  //   if let Some(Block::Free) = self.map.get(unit_pos.north())
-  // }
+    let unit_pos = self.units[unit_id].1;
+
+    [
+      self.north_of(&unit_pos).and_then(|p| if self.block_at(&p) == Some(&Block::Free) { Some(p) } else { None }),
+      self.east_of(&unit_pos).and_then(|p| if self.block_at(&p) == Some(&Block::Free) { Some(p) } else { None }),
+      self.south_of(&unit_pos).and_then(|p| if self.block_at(&p) == Some(&Block::Free) { Some(p) } else { None }),
+      self.west_of(&unit_pos).and_then(|p| if self.block_at(&p) == Some(&Block::Free) { Some(p) } else { None }),
+    ]
+  }
+
+  /// Get all the adjacent foes that we can hit around us.
+  fn get_adjacent_foes(&self, unit_id: UnitId) -> [Option<UnitId>; 4] {
+    assert!(unit_id < self.units.len());
+
+    let &(ref unit, unit_pos) = &self.units[unit_id];
+    let foe_id = |p| {
+      if unit.species == Species::Elf {
+        match self.block_at(&p) {
+          Some(Block::Goblin(id)) => Some(*id),
+          _ => None
+        }
+      } else {
+        match self.block_at(&p) {
+          Some(Block::Elf(id)) => Some(*id),
+          _ => None
+        }
+      }
+    };
+
+    [
+      self.north_of(&unit_pos).and_then(foe_id),
+      self.east_of(&unit_pos).and_then(foe_id),
+      self.south_of(&unit_pos).and_then(foe_id),
+      self.west_of(&unit_pos).and_then(foe_id),
+    ]
+  }
 
   fn north_of(&self, p: &Pos) -> Option<Pos> {
     if p.1 == 0 {
@@ -75,35 +143,21 @@ impl Map {
   }
 }
 
-/// A block of a map.
-#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
-enum Block {
-  Wall,
-  Free,
-  Elf(UnitId),
-}
-
-#[derive(Debug)]
-struct Unit {
-  hp: u8,
-  species: Species
-}
-
-impl Unit {
-  fn is_elf(&self) -> bool {
-    self.species == Species::Elf
+/// Check whether a unit can move.
+fn can_move(destinations: &[Option<Pos>; 4]) -> bool {
+  match destinations {
+    &[None, None, None, None] => false,
+    _ => true
   }
 }
 
-#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
-enum Species {
-  Elf,
-  Goblin
+/// Check whether a unit can attack someone.
+fn can_attack(foes: &[Option<UnitId>; 4]) -> bool {
+  match foes {
+    &[None, None, None, None] => false,
+    _ => true
+  }
 }
-
-type UnitId = usize;
-
-type Pos = (usize, usize);
 
 fn main() {
   println!("Hello, world!");

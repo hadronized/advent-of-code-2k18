@@ -72,13 +72,13 @@ impl Map {
   }
 
   /// Get all the possible positions a unit can move to.
-  fn get_available_destinations(&self, pos: &Pos) -> [Option<Pos>; 4] {
+  fn get_available_destinations(&self, pos: &Pos) -> Vec<Pos> {
     [
       self.north_of(pos).and_then(|p| if self.block_at(&p) == Some(&Block::Free) { Some(p) } else { None }),
       self.east_of(pos).and_then(|p| if self.block_at(&p) == Some(&Block::Free) { Some(p) } else { None }),
       self.south_of(pos).and_then(|p| if self.block_at(&p) == Some(&Block::Free) { Some(p) } else { None }),
       self.west_of(pos).and_then(|p| if self.block_at(&p) == Some(&Block::Free) { Some(p) } else { None }),
-    ]
+    ].iter().cloned().flatten().collect()
   }
 
   /// Get all the adjacent foes that we can hit around us.
@@ -119,7 +119,7 @@ impl Map {
     for (i, (unit, pos)) in self.units.iter().enumerate() {
       if i != unit_id {
         if unit.species != current_unit.species {
-          tgt_list.extend(self.get_available_destinations(pos).iter().flatten());
+          tgt_list.extend(self.get_available_destinations(pos));
         }
       }
     }
@@ -135,20 +135,33 @@ impl Map {
     assert!(unit_id < self.units.len());
 
     let targets_set: HashSet<_> = targets.iter().cloned().collect();
-    let mut reachable = HashSet::new();
+    let mut reachables = HashSet::new();
     let mut visited = HashSet::new();
     let mut visiting = VecDeque::new();
 
     visiting.push_back(self.units[unit_id].1);
 
-    loop {
-      // pop the queue and move into visited
-      let current = visiting.pop_front();
+    while !visiting.is_empty() {
+      let current = visiting.pop_front().unwrap();
       visited.insert(current);
+
+      // check if this position is reachable; if so, add it to the reachables
+      if targets_set.contains(&current) {
+        reachables.insert(current);
+      }
 
       // get all the adjacent position we can go to 
       let around = self.get_available_destinations(&current);
+
+      // add them to the visiting only if we haven’t visited them already
+      for p in &around {
+        if !visited.contains(p) {
+          visiting.push_back(*p);
+        }
+      }
     }
+
+    reachables
   }
 
   fn north_of(&self, p: &Pos) -> Option<Pos> {

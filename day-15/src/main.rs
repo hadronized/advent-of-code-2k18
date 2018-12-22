@@ -1,3 +1,5 @@
+use std::collections::{HashSet, VecDeque};
+
 const ATTACK_DMG: u8 = 3;
 
 /// A block of a map.
@@ -70,16 +72,12 @@ impl Map {
   }
 
   /// Get all the possible positions a unit can move to.
-  fn get_available_destinations(&self, unit_id: UnitId) -> [Option<Pos>; 4] {
-    assert!(unit_id < self.units.len());
-
-    let unit_pos = self.units[unit_id].1;
-
+  fn get_available_destinations(&self, pos: &Pos) -> [Option<Pos>; 4] {
     [
-      self.north_of(&unit_pos).and_then(|p| if self.block_at(&p) == Some(&Block::Free) { Some(p) } else { None }),
-      self.east_of(&unit_pos).and_then(|p| if self.block_at(&p) == Some(&Block::Free) { Some(p) } else { None }),
-      self.south_of(&unit_pos).and_then(|p| if self.block_at(&p) == Some(&Block::Free) { Some(p) } else { None }),
-      self.west_of(&unit_pos).and_then(|p| if self.block_at(&p) == Some(&Block::Free) { Some(p) } else { None }),
+      self.north_of(pos).and_then(|p| if self.block_at(&p) == Some(&Block::Free) { Some(p) } else { None }),
+      self.east_of(pos).and_then(|p| if self.block_at(&p) == Some(&Block::Free) { Some(p) } else { None }),
+      self.south_of(pos).and_then(|p| if self.block_at(&p) == Some(&Block::Free) { Some(p) } else { None }),
+      self.west_of(pos).and_then(|p| if self.block_at(&p) == Some(&Block::Free) { Some(p) } else { None }),
     ]
   }
 
@@ -118,15 +116,39 @@ impl Map {
     let mut tgt_list = Vec::new();
     let &(ref current_unit, _) = &self.units[unit_id];
 
-    for (i, (unit, _)) in self.units.iter().enumerate() {
+    for (i, (unit, pos)) in self.units.iter().enumerate() {
       if i != unit_id {
         if unit.species != current_unit.species {
-          tgt_list.extend(self.get_available_destinations(i).iter().flatten());
+          tgt_list.extend(self.get_available_destinations(pos).iter().flatten());
         }
       }
     }
 
     tgt_list
+  }
+
+  /// Prune a list of in-range target blocks by removing those who are not reachable (i.e. they
+  /// would require to go through walls or other units.
+  fn prune_unreachable_targets(&self, unit_id: UnitId, targets: &[Pos]) -> HashSet<Pos> {
+    // algorithm: we explore around (without keeping trace of paths) until we cannot discover
+    // anything; if we find a target block, we add it to the list of reachable
+    assert!(unit_id < self.units.len());
+
+    let targets_set: HashSet<_> = targets.iter().cloned().collect();
+    let mut reachable = HashSet::new();
+    let mut visited = HashSet::new();
+    let mut visiting = VecDeque::new();
+
+    visiting.push_back(self.units[unit_id].1);
+
+    loop {
+      // pop the queue and move into visited
+      let current = visiting.pop_front();
+      visited.insert(current);
+
+      // get all the adjacent position we can go to 
+      let around = self.get_available_destinations(&current);
+    }
   }
 
   fn north_of(&self, p: &Pos) -> Option<Pos> {

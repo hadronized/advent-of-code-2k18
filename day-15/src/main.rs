@@ -6,7 +6,7 @@ const ATTACK_DMG: u8 = 3;
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 enum Block {
   Wall,
-  Free,
+  Empty,
   Elf(UnitId),
   Goblin(UnitId)
 }
@@ -74,10 +74,10 @@ impl Map {
   /// Get all the possible positions a unit can move to.
   fn get_available_destinations(&self, pos: &Pos) -> Vec<Pos> {
     [
-      self.north_of(pos).and_then(|p| if self.block_at(&p) == Some(&Block::Free) { Some(p) } else { None }),
-      self.east_of(pos).and_then(|p| if self.block_at(&p) == Some(&Block::Free) { Some(p) } else { None }),
-      self.south_of(pos).and_then(|p| if self.block_at(&p) == Some(&Block::Free) { Some(p) } else { None }),
-      self.west_of(pos).and_then(|p| if self.block_at(&p) == Some(&Block::Free) { Some(p) } else { None }),
+      self.north_of(pos).and_then(|p| if self.block_at(&p) == Some(&Block::Empty) { Some(p) } else { None }),
+      self.east_of(pos).and_then(|p| if self.block_at(&p) == Some(&Block::Empty) { Some(p) } else { None }),
+      self.south_of(pos).and_then(|p| if self.block_at(&p) == Some(&Block::Empty) { Some(p) } else { None }),
+      self.west_of(pos).and_then(|p| if self.block_at(&p) == Some(&Block::Empty) { Some(p) } else { None }),
     ].iter().cloned().flatten().collect()
   }
 
@@ -153,9 +153,10 @@ impl Map {
       // get all the adjacent position we can go to 
       let around = self.get_available_destinations(&current);
 
-      // add them to the visiting only if we haven’t visited them already
+      // add them to the visiting only if we haven’t visited them already and that they’re don’t
+      // contain a unit
       for p in &around {
-        if !visited.contains(p) {
+        if !visited.contains(p) && self.block_at(p) == Some(&Block::Empty) {
           visiting.push_back(*p);
         }
       }

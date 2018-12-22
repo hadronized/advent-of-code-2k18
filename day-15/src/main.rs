@@ -110,6 +110,25 @@ impl Map {
     ]
   }
 
+  /// Get all the in-range target blocks of a given unit. These are all available destinations of
+  /// all foes (even unreachable).
+  fn in_range_targets(&self, unit_id: UnitId) -> Vec<Pos> {
+    assert!(unit_id < self.units.len());
+
+    let mut tgt_list = Vec::new();
+    let &(ref current_unit, _) = &self.units[unit_id];
+
+    for (i, (unit, _)) in self.units.iter().enumerate() {
+      if i != unit_id {
+        if unit.species != current_unit.species {
+          tgt_list.extend(self.get_available_destinations(i).iter().flatten());
+        }
+      }
+    }
+
+    tgt_list
+  }
+
   fn north_of(&self, p: &Pos) -> Option<Pos> {
     if p.1 == 0 {
       None

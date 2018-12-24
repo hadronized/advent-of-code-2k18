@@ -185,8 +185,8 @@ impl Map {
     tgt_list
   }
 
-  /// Prune a list of in-range target blocks by removing those who are not reachable (i.e. they
-  /// would require to go through walls or other units.
+  /// Prune a list of in-range target blocks by removing those that are not reachable (i.e. they
+  /// would require to go through walls or other units).
   fn prune_unreachable_targets(&self, unit_id: UnitId, targets: &HashSet<Pos>) -> HashSet<Pos> {
     // algorithm: we explore around (without keeping trace of paths) until we cannot discover
     // anything; if we find a target block, we add it to the list of reachable
@@ -222,32 +222,32 @@ impl Map {
     reachables
   }
 
-  // /// Get the nearest blocks out of a set.
-  // ///
-  // /// This function will find the path to the nearest block that can be found in the input set. If
-  // /// two paths are at the same distance, a rule of thumb is applied to return the one with the
-  // /// hightest probability.
-  // fn nearest_targets(&self, start: &Pos, targets: &HashSet<Pos>) -> PosPath {
-  //   let mut visiting = VecDeque::new();
-  //   let mut visited = HashSet::new();
+  /// Get the nearest blocks out of a set.
+  ///
+  /// This function will find the path to the nearest block that can be found in the input set. If
+  /// two paths are at the same distance, a rule of thumb is applied to return the one with the
+  /// hightest probability.
+  fn nearest_targets(&self, start: &Pos, targets: &HashSet<Pos>) -> PosPath {
+    let mut visiting = VecDeque::new();
+    let mut visited = HashSet::new();
 
-  //   // populate the list of visiting with the current adjacent blocks
-  //   for adj in self.targets(start) {
-  //     visiting.push_back(PosPath::new(adj));
-  //   }
+    // populate the list of visiting with the current adjacent blocks
+    for adj in self.targets(start) {
+      visiting.push_back(PosPath::new(adj));
+    }
 
-  //   while !visiting.is_empty() {
-  //     // get the last path and try to expand it
-  //     let path = visiting.pop_front().unwrap();
-  //     let recent = path.recent();
+    while !visiting.is_empty() {
+      // get the last path and try to expand it
+      let path = visiting.pop_front().unwrap();
+      let recent = path.recent();
 
 
-  //     // if the current position is in the target list, it’s a solution path
-  //     if targets.contains(recent) {
+      // if the current position is in the target list, it’s a solution path
+      if targets.contains(recent) {
 
-  //     }
-  //   }
-  // }
+      }
+    }
+  }
 
   fn north_of(&self, p: &Pos) -> Option<Pos> {
     if p.1 == 0 {

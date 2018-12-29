@@ -1,4 +1,4 @@
-use std::collections::{HashSet, VecDeque};
+use std::collections::{HashSet, HashMap, VecDeque};
 
 const MAX_HP: u8 = 200;
 const ATTACK_DMG: u8 = 3;
@@ -227,24 +227,33 @@ impl Map {
   /// This function will find the path to the nearest block that can be found in the input set. If
   /// two paths are at the same distance, a rule of thumb is applied to return the one with the
   /// hightest probability.
-  fn nearest_targets(&self, start: &Pos, targets: &HashSet<Pos>) -> PosPath {
+  fn nearest_targets(&self, start: &Pos, targets: &HashSet<Pos>) {
+    // distance table, mapping traversed position to the position that minimizes the distance to go
+    // there
+    let mut min_table: HashMap<Pos, (usize, Pos)> = HashMap::new();
     let mut visiting = VecDeque::new();
     let mut visited = HashSet::new();
 
-    // populate the list of visiting with the current adjacent blocks
-    for adj in self.targets(start) {
-      visiting.push_back(PosPath::new(adj));
-    }
+    min_table.insert(*start, (0, *start));
+    visiting.push_back(*start);
 
-    while !visiting.is_empty() {
-      // get the last path and try to expand it
-      let path = visiting.pop_front().unwrap();
-      let recent = path.recent();
+    while let Some(current) = visiting.pop_front() {
+      visited.insert(current);
 
+      let tgts = self.targets(&current).into_iter().filter(|p| !visited.contains(&p));
 
-      // if the current position is in the target list, it’s a solution path
-      if targets.contains(recent) {
+      for tgt in tgts {
+        visiting.push_back(tgt);
 
+        // if that target already has a distance, update only if ours is less
+        match (min_table.get(&tgt).cloned(), min_table.get(&current).cloned()) {
+          (Some(tgt_min), Some(mut current_min)) if current_min.0 + 1 < tgt_min.0 => {
+            current_min.0 += 1;
+            min_table.insert(tgt, current_min);
+          }
+
+          _ => ()
+        }
       }
     }
   }
